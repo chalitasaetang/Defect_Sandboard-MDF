@@ -1,0 +1,7 @@
+streamlit
+pandas
+xlrd
+plotly
+reportlab
+matplotlib
+pymupdf
