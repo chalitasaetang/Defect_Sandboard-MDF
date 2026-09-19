@@ -188,7 +188,7 @@ def generate_pdf_report(
     n_days,
     top5_series,          # pandas Series: index=defect name, values=qty (already top 5, descending)
     leader_df,             # DataFrame with columns: หัวหน้ากะ, ยอดไม้เข้าขัด (m³), ตำหนิหลังขัด (m³), % ตำหนิ
-    tech_summary_df,       # DataFrame with columns: ช่างเครื่องขัด, จำนวนแผ่น (Pcs)  (may be empty)
+    tech_summary_df,       # DataFrame with columns: Operator เครื่องขัด, จำนวนแผ่น (Pcs)  (may be empty)
     tech_defecttype_df,    # DataFrame with columns: ประเภทตำหนิ, จำนวนแผ่น (Pcs)   (may be empty)
     generated_at_text,
     defect_target_pct=3.0,
@@ -348,12 +348,12 @@ def generate_pdf_report(
     story.append(Spacer(1, 16))
 
     # ---------- Machine operator (technician) breakdown ----------
-    story.append(Paragraph("ตำหนิเครื่องขัด", styles["section"]))
+    story.append(Paragraph("ตำหนิจากเครื่องขัด", styles["section"]))
     story.append(HRFlowable(width="100%", thickness=1, color=VIRIDIAN, spaceAfter=8))
 
     if tech_summary_df is not None and len(tech_summary_df) > 0:
         left_tbl_df = tech_summary_df.copy()
-        left_tbl_df.columns = ["ช่างเครื่องขัด", "จำนวนแผ่น (Pcs)"]
+        left_tbl_df.columns = ["Operator เครื่องขัด", "จำนวนแผ่น (Pcs)"]
         left_tbl_df["จำนวนแผ่น (Pcs)"] = left_tbl_df["จำนวนแผ่น (Pcs)"].map(lambda x: f"{x:,.0f}")
         story.append(_df_to_table(left_tbl_df, col_widths=[85 * mm, 85 * mm]))
         story.append(Spacer(1, 8))
@@ -364,7 +364,7 @@ def generate_pdf_report(
             chart_buf2 = _make_bar_chart_png(labels, values, horizontal=False, figsize=(6.6, 3.0))
             story.append(Image(chart_buf2, width=165 * mm, height=72 * mm))
     else:
-        story.append(Paragraph("ไม่มีข้อมูลระบุชื่อช่างเครื่องขัดในช่วงวันที่นี้", styles["body"]))
+        story.append(Paragraph("ไม่มีข้อมูลระบุชื่อ Operator เครื่องขัดในช่วงวันที่นี้", styles["body"]))
 
     story.append(Spacer(1, 16))
 
