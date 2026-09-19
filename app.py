@@ -208,13 +208,13 @@ with right:
 
 st.divider()
 
-# ---------- ตำหนิเครื่องขัด ----------
-st.subheader("🔧 ตำหนิเครื่องขัด")
-tech_sum = pd.DataFrame(columns=["ช่างเครื่องขัด", "จำนวนแผ่น (Pcs)"])
+# ---------- ตำหนิจากเครื่องขัด ----------
+st.subheader("🔧 ตำหนิจากเครื่องขัด")
+tech_sum = pd.DataFrame(columns=["Operator เครื่องขัด", "จำนวนแผ่น (Pcs)"])
 defect_type_sum = pd.DataFrame(columns=["ประเภทตำหนิ", "จำนวนแผ่น (Pcs)"])
 
 if ftech_df.empty:
-    st.info("ไม่มีข้อมูลระบุชื่อช่างเครื่องขัดในช่วงวันที่นี้")
+    st.info("ไม่มีข้อมูลระบุชื่อ Operator เครื่องขัดในช่วงวันที่นี้")
 else:
     tech_col, detail_col = st.columns([1, 1.3])
 
@@ -225,7 +225,7 @@ else:
             .sort_values(ascending=False)
             .reset_index()
         )
-        tech_sum.columns = ["ช่างเครื่องขัด", "จำนวนแผ่น (Pcs)"]
+        tech_sum.columns = ["Operator เครื่องขัด", "จำนวนแผ่น (Pcs)"]
         tech_sum.index = tech_sum.index + 1
         st.dataframe(tech_sum, use_container_width=True)
 
@@ -255,7 +255,7 @@ else:
             .reset_index()
             .sort_values(["technician", "qty"], ascending=[True, False])
         )
-        detail.columns = ["ช่างเครื่องขัด", "ประเภทตำหนิ", "จำนวนแผ่น (Pcs)"]
+        detail.columns = ["Operator เครื่องขัด", "ประเภทตำหนิ", "จำนวนแผ่น (Pcs)"]
         detail.index = range(1, len(detail) + 1)
         st.dataframe(detail, use_container_width=True, height=350)
 
