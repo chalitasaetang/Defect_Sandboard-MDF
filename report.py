@@ -117,6 +117,41 @@ def _styles(is_monthly=False):
     return styles
 
 
+def _make_line_chart_png(trend_df, colors_list=None, figsize=(6.6, 2.6)):
+    """
+    วาดกราฟเส้น multi-series แสดงแนวโน้มรายวันของตำหนิแต่ละประเภท (Top 5)
+    trend_df: DataFrame index=date, columns=ชื่อตำหนิ (คอลัมน์ละ 1 เส้น), values=จำนวนแผ่น
+    """
+    _ensure_fonts()
+    fig, ax = plt.subplots(figsize=figsize, dpi=200)
+    default_palette = ["#09093C", "#527482", "#96D4ED", "#00694A", "#E0304F"]
+    palette = colors_list if colors_list else default_palette
+
+    x_labels = [d.strftime("%d/%m") for d in trend_df.index]
+    x_pos = range(len(x_labels))
+
+    for i, col in enumerate(trend_df.columns):
+        c = palette[i % len(palette)]
+        ax.plot(list(x_pos), trend_df[col].values, marker="o", markersize=3,
+                linewidth=1.6, color=c, label=col)
+
+    ax.set_xticks(list(x_pos))
+    ax.set_xticklabels(x_labels, fontsize=7, rotation=45, ha="right", rotation_mode="anchor")
+    ax.tick_params(axis="y", labelsize=8, colors="#444444")
+    ax.spines[["top", "right"]].set_visible(False)
+    ax.set_ylabel("จำนวนแผ่น (Pcs)", fontsize=8.5, color="#444444")
+    ax.legend(fontsize=7.5, loc="upper center", bbox_to_anchor=(0.5, -0.28),
+               ncol=min(len(trend_df.columns), 3), frameon=False)
+    ax.grid(axis="y", color="#EEEEEE", linewidth=0.6)
+    fig.tight_layout()
+
+    buf = io.BytesIO()
+    fig.savefig(buf, format="png", bbox_inches="tight")
+    plt.close(fig)
+    buf.seek(0)
+    return buf
+
+
 def _make_bar_chart_png(labels, values, color="#009B77", text_color=None,
                           title="", horizontal=False, figsize=(6.6, 3.2)):
     _ensure_fonts()
@@ -229,6 +264,7 @@ def generate_pdf_report(
     generated_at_text,
     defect_target_pct=3.0,
     source_summary_df=None,  # DataFrame: แหล่งที่มาตำหนิ, จำนวนแผ่น (Pcs), % ตำหนิรวม
+    top5_trend_df=None,   # DataFrame: index=date, columns=Top5 defect names, values=qty/day (สำหรับกราฟเส้นแนวโน้ม)
     production_line=None,   # e.g. "MDF LINE 2" -- appended to the report title when given
     is_monthly=False,        # True เมื่อ period_text เป็น "ประจำเดือน ..." (28-31 วัน เดือนเดียวกัน) -> กราฟเป็นสีม่วง
 ):
@@ -367,10 +403,14 @@ def generate_pdf_report(
         story.append(Image(chart_buf, width=165 * mm, height=65 * mm))
         story.append(Spacer(1, 6))
 
-        top5_df = top5_series.reset_index()
-        top5_df.columns = ["ประเภทตำหนิ", "จำนวนแผ่น (Pcs)"]
-        top5_df["จำนวนแผ่น (Pcs)"] = top5_df["จำนวนแผ่น (Pcs)"].map(lambda x: f"{x:,.0f}")
-        story.append(_df_to_table(top5_df, col_widths=[120 * mm, 50 * mm], header_bg=accent, row_stripe=accent_light, header_text_color=table_header_text_color))
+        if top5_trend_df is not None and len(top5_trend_df) > 0:
+            trend_buf = _make_line_chart_png(top5_trend_df, figsize=(6.6, 2.6))
+            story.append(Image(trend_buf, width=165 * mm, height=65 * mm))
+        else:
+            top5_df = top5_series.reset_index()
+            top5_df.columns = ["ประเภทตำหนิ", "จำนวนแผ่น (Pcs)"]
+            top5_df["จำนวนแผ่น (Pcs)"] = top5_df["จำนวนแผ่น (Pcs)"].map(lambda x: f"{x:,.0f}")
+            story.append(_df_to_table(top5_df, col_widths=[120 * mm, 50 * mm], header_bg=accent, row_stripe=accent_light, header_text_color=table_header_text_color))
     else:
         story.append(Paragraph("ไม่มีข้อมูลตำหนิรายชนิดในช่วงวันที่นี้", styles["body"]))
 
