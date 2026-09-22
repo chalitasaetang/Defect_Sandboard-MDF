@@ -30,17 +30,17 @@ VIRIDIAN_LIGHT = colors.HexColor("#E6F5F0")
 GREY_TEXT = colors.HexColor("#333333")
 GREY_LINE = colors.HexColor("#CCCCCC")
 
-# ---------- Theme: Purple (ใช้เมื่อเป็นรายงานประจำเดือน, is_monthly=True) ----------
+# ---------- Theme: Sky blue (ใช้เมื่อเป็นรายงานประจำเดือน, is_monthly=True) ----------
 # ครอบคลุมทุกจุดยกเว้นกล่อง KPI แรก (% ตำหนิหลังขัด) ซึ่งคงสีเขียว/แดงเดิมเสมอเพื่อสื่อ target
-PURPLE = colors.HexColor("#7B4FE0")
-PURPLE_DARK = colors.HexColor("#5A32B5")
-PURPLE_LIGHT = colors.HexColor("#F1ECFB")
+ACCENT2 = colors.HexColor("#96D4ED")
+ACCENT2_DARK = colors.HexColor("#527482")
+ACCENT2_LIGHT = colors.HexColor("#E4F4FA")
 
 
 def _theme_colors(is_monthly):
     """คืนค่า (accent, accent_dark, accent_light) ตามธีมที่ใช้งานอยู่"""
     if is_monthly:
-        return PURPLE, PURPLE_DARK, PURPLE_LIGHT
+        return ACCENT2, ACCENT2_DARK, ACCENT2_LIGHT
     return VIRIDIAN, VIRIDIAN_DARK, VIRIDIAN_LIGHT
 
 
@@ -117,12 +117,12 @@ def _styles(is_monthly=False):
     return styles
 
 
-def _make_bar_chart_png(labels, values, color="#009B77",
+def _make_bar_chart_png(labels, values, color="#009B77", text_color=None,
                           title="", horizontal=False, figsize=(6.6, 3.2)):
     _ensure_fonts()
     fig, ax = plt.subplots(figsize=figsize, dpi=200)
     bar_color = color
-    text_color = color
+    text_color = text_color if text_color is not None else color
     if horizontal:
         y_pos = range(len(labels))
         ax.barh(list(y_pos), values, color=bar_color)
@@ -202,7 +202,7 @@ def _header_footer(canvas, doc, title_text, period_text, is_monthly=False):
     canvas.drawString(20 * mm, page_h - 15 * mm, title_text)
 
     canvas.setFont("Sarabun", 12)
-    subtitle_color = colors.HexColor("#EDE5FB") if is_monthly else colors.HexColor("#D8F3EA")
+    subtitle_color = colors.HexColor("#F0F9FD") if is_monthly else colors.HexColor("#D8F3EA")
     canvas.setFillColor(subtitle_color)
     canvas.drawString(20 * mm, page_h - 22 * mm, period_text)
 
@@ -235,7 +235,8 @@ def generate_pdf_report(
     _ensure_fonts()
     styles = _styles(is_monthly=is_monthly)
     accent, accent_dark, accent_light = _theme_colors(is_monthly)
-    chart_color = "#7B4FE0" if is_monthly else "#009B77"
+    chart_color = "#96D4ED" if is_monthly else "#009B77"
+    chart_text_color = "#527482" if is_monthly else "#00694A"
 
     report_title = "รายงานสรุปตำหนิหลังขัด" + (f" {production_line}" if production_line else "")
 
@@ -361,7 +362,7 @@ def generate_pdf_report(
     if top5_series is not None and len(top5_series) > 0:
         labels = list(top5_series.index)
         values = list(top5_series.values)
-        chart_buf = _make_bar_chart_png(labels, values, color=chart_color, horizontal=True, figsize=(6.6, 2.6))
+        chart_buf = _make_bar_chart_png(labels, values, color=chart_color, text_color=chart_text_color, horizontal=True, figsize=(6.6, 2.6))
         story.append(Image(chart_buf, width=165 * mm, height=65 * mm))
         story.append(Spacer(1, 6))
 
@@ -420,7 +421,7 @@ def generate_pdf_report(
         if tech_defecttype_df is not None and len(tech_defecttype_df) > 0:
             labels = list(tech_defecttype_df.iloc[:, 0])
             values = list(tech_defecttype_df.iloc[:, 1])
-            chart_buf2 = _make_bar_chart_png(labels, values, color=chart_color, horizontal=False, figsize=(6.6, 3.0))
+            chart_buf2 = _make_bar_chart_png(labels, values, color=chart_color, text_color=chart_text_color, horizontal=False, figsize=(6.6, 3.0))
             story.append(Image(chart_buf2, width=165 * mm, height=72 * mm))
     else:
         story.append(Paragraph("ไม่มีข้อมูลระบุชื่อ Operator เครื่องขัดในช่วงวันที่นี้", styles["body"]))
