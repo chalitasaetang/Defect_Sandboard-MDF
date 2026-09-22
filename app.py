@@ -243,6 +243,7 @@ with left:
         st.dataframe(_table_header_style(top5_table.style), use_container_width=True)
 
 # ---------- แนวโน้มรายวันของ Top 5 ตำหนิ ----------
+top5_trend_wide = None  # DataFrame index=date, columns=ชื่อตำหนิ (Top5) -- ใช้ซ้ำตอนสร้าง JPG ด้วย
 with right:
     _section_header("📈 แนวโน้มรายวัน (Top 5 ตำหนิ)")
     if top5_display.empty:
@@ -252,6 +253,8 @@ with right:
         trend_df = fdf[["date"] + top5_cols].copy()
         trend_df = trend_df.groupby("date")[top5_cols].sum().reset_index()
         trend_df = trend_df.rename(columns={c: c.replace("ตำหนิ::", "") for c in top5_cols})
+        top5_trend_wide = trend_df.set_index("date")  # เก็บไว้ใช้ตอนสร้าง JPG
+
         trend_long = trend_df.melt(id_vars="date", var_name="ประเภทตำหนิ", value_name="จำนวนแผ่น (Pcs)")
 
         fig_trend = px.line(
@@ -456,6 +459,7 @@ if st.button("🖼️ สร้างรายงาน JPG", type="primary"):
             n_days=n_days_with_data,
             defect_target_pct=DEFECT_TARGET_PCT,
             top5_series=top5_display,
+            top5_trend_df=top5_trend_wide,
             leader_df=leader_for_pdf,
             tech_summary_df=tech_summary_for_pdf,
             tech_defecttype_df=tech_defecttype_for_pdf,
