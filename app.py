@@ -108,7 +108,7 @@ period_label_text, is_monthly_period = _period_label(_norm_start, _norm_end)
 st.caption(f"{period_label_text} ({n_days_with_data} วันที่มีข้อมูล)")
 
 # สีกราฟ: ม่วง เมื่อเป็นรายงานประจำเดือน (28-31 วันในเดือนเดียวกัน), เขียวเดิมเมื่อเป็นช่วงวันที่ทั่วไป
-CHART_COLOR = "#7B4FE0" if is_monthly_period else "#009B77"
+CHART_COLOR = "#96D4ED" if is_monthly_period else "#009B77"
 
 
 def _section_header(text):
@@ -116,7 +116,7 @@ def _section_header(text):
     หัวข้อ section แบบ custom (แทน st.subheader) เพื่อคุมสีให้เปลี่ยนเป็นม่วงได้
     เมื่อเป็นรายงานประจำเดือน (is_monthly_period=True)
     """
-    color = "#5A32B5" if is_monthly_period else "#009B77"
+    color = "#527482" if is_monthly_period else "#009B77"
     st.markdown(
         f'<h3 style="color:{color}; font-size:1.5rem; font-weight:600; margin-top:0.5rem; margin-bottom:0.5rem;">{text}</h3>',
         unsafe_allow_html=True,
@@ -128,7 +128,7 @@ def _table_header_style(styler):
     บังคับสีพื้นหลัง/ตัวหนังสือหัวตารางให้เป็นม่วงเมื่อเป็นรายงานประจำเดือน
     เขียวตามปกติเมื่อไม่ใช่ (ใช้ set_table_styles คุม <th> โดยตรง ไม่ผูกกับ config.toml ของ Streamlit)
     """
-    header_bg = "#7B4FE0" if is_monthly_period else "#009B77"
+    header_bg = "#96D4ED" if is_monthly_period else "#009B77"
     return styler.set_table_styles(
         [{"selector": "th", "props": [("background-color", header_bg), ("color", "white")]}],
         overwrite=False,
@@ -189,8 +189,8 @@ with k1:
     )
 
 with k2:
-    kpi2_bg = "#F1ECFB" if is_monthly_period else "#F0F2F6"
-    kpi2_text = "#5A32B5" if is_monthly_period else "#31333F"
+    kpi2_bg = "#E4F4FA" if is_monthly_period else "#F0F2F6"
+    kpi2_text = "#527482" if is_monthly_period else "#31333F"
     kpi2_subtext = "#5C5F6D"
     st.markdown(
         f'<div style="margin-top:14px;">'
@@ -200,8 +200,8 @@ with k2:
     )
 
 with k3:
-    kpi3_bg = "#F1ECFB" if is_monthly_period else "#F0F2F6"
-    kpi3_text = "#5A32B5" if is_monthly_period else "#31333F"
+    kpi3_bg = "#E4F4FA" if is_monthly_period else "#F0F2F6"
+    kpi3_text = "#527482" if is_monthly_period else "#31333F"
     kpi3_subtext = "#5C5F6D"
     st.markdown(
         f'<div style="margin-top:14px;">'
