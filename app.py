@@ -242,66 +242,97 @@ with left:
         top5_table.index = top5_table.index + 1
         st.dataframe(_table_header_style(top5_table.style), use_container_width=True)
 
-# ---------- % ตำหนิแยกตามหัวหน้ากะ ----------
+# ---------- แนวโน้มรายวันของ Top 5 ตำหนิ ----------
 with right:
-    _section_header("👷 % ตำหนิหลังขัด แยกตามหัวหน้ากะ")
-    leader_grp = fdf.groupby("หัวหน้ากะ")[["ยอดไม้เข้าขัด(CU)", "ตำหนิหลังขัด(คิว)"]].sum()
-    leader_grp = leader_grp[leader_grp["ยอดไม้เข้าขัด(CU)"] > 0]  # ตัดหัวหน้ากะที่ไม่มียอดเข้าขัด (หารไม่ได้)
-    leader_grp["% ตำหนิ"] = (leader_grp["ตำหนิหลังขัด(คิว)"] / leader_grp["ยอดไม้เข้าขัด(CU)"] * 100).round(2)
-    leader_grp = leader_grp.sort_values("% ตำหนิ", ascending=False)
-    leader_grp = leader_grp.rename(columns={
-        "ยอดไม้เข้าขัด(CU)": "ยอดไม้เข้าขัด (m³)",
-        "ตำหนิหลังขัด(คิว)": "ตำหนิหลังขัด (m³)",
-    })
-    leader_grp = leader_grp.reset_index()
-    leader_grp.index = leader_grp.index + 1
+    _section_header("📈 แนวโน้มรายวัน (Top 5 ตำหนิ)")
+    if top5_display.empty:
+        st.info("ไม่มีข้อมูลตำหนิรายชนิดในช่วงวันที่นี้")
+    else:
+        top5_cols = ["ตำหนิ::" + name for name in top5_display.index]
+        trend_df = fdf[["date"] + top5_cols].copy()
+        trend_df = trend_df.groupby("date")[top5_cols].sum().reset_index()
+        trend_df = trend_df.rename(columns={c: c.replace("ตำหนิ::", "") for c in top5_cols})
+        trend_long = trend_df.melt(id_vars="date", var_name="ประเภทตำหนิ", value_name="จำนวนแผ่น (Pcs)")
 
-    def _highlight_over_target_row(row):
-        if row["% ตำหนิ"] > DEFECT_TARGET_PCT:
-            return ["color:#E0304F; font-weight:700;"] * len(row)
-        return [""] * len(row)
+        fig_trend = px.line(
+            trend_long,
+            x="date",
+            y="จำนวนแผ่น (Pcs)",
+            color="ประเภทตำหนิ",
+            markers=True,
+            labels={"date": "วันที่"},
+        )
+        fig_trend.update_layout(
+            height=350,
+            margin=dict(l=10, r=10, t=10, b=10),
+            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0),
+        )
+        st.plotly_chart(fig_trend, use_container_width=True)
+        st.caption("แสดงจำนวนแผ่นของตำหนิ Top 5 รายวัน เพื่อดูว่าตำหนิลากยาวกี่วัน และวันล่าสุดลดลงหรือยัง")
 
-    st.dataframe(
-        _table_header_style(
-            leader_grp.style.format({
-                "ยอดไม้เข้าขัด (m³)": "{:,.2f}",
-                "ตำหนิหลังขัด (m³)": "{:,.2f}",
-                "% ตำหนิ": "{:.2f}%",
-            }).apply(_highlight_over_target_row, axis=1)
-        ),
-        use_container_width=True,
-    )
+st.divider()
 
-    fig2 = px.bar(
-        leader_grp,
-        x="หัวหน้ากะ",
-        y="% ตำหนิ",
-        text="% ตำหนิ",
-        color_discrete_sequence=[CHART_COLOR],
-    )
-    fig2.update_traces(texttemplate="%{text:.2f}%", textposition="outside")
-    fig2.update_layout(height=300, margin=dict(l=10, r=10, t=10, b=10))
-    st.plotly_chart(fig2, use_container_width=True)
+# ---------- % ตำหนิแยกตามหัวหน้ากะ ----------
+_section_header("👷 % ตำหนิหลังขัด แยกตามหัวหน้ากะ")
+leader_grp = fdf.groupby("หัวหน้ากะ")[["ยอดไม้เข้าขัด(CU)", "ตำหนิหลังขัด(คิว)"]].sum()
+leader_grp = leader_grp[leader_grp["ยอดไม้เข้าขัด(CU)"] > 0]  # ตัดหัวหน้ากะที่ไม่มียอดเข้าขัด (หารไม่ได้)
+leader_grp["% ตำหนิ"] = (leader_grp["ตำหนิหลังขัด(คิว)"] / leader_grp["ยอดไม้เข้าขัด(CU)"] * 100).round(2)
+leader_grp = leader_grp.sort_values("% ตำหนิ", ascending=False)
+leader_grp = leader_grp.rename(columns={
+    "ยอดไม้เข้าขัด(CU)": "ยอดไม้เข้าขัด (m³)",
+    "ตำหนิหลังขัด(คิว)": "ตำหนิหลังขัด (m³)",
+})
+leader_grp = leader_grp.reset_index()
+leader_grp.index = leader_grp.index + 1
 
-    st.caption("รายละเอียดตำหนิแยกตามหัวหน้ากะและประเภทตำหนิ")
-    leader_defect_long = fdf.melt(
-        id_vars=["หัวหน้ากะ"],
-        value_vars=defect_cols,
-        var_name="ประเภทตำหนิ",
-        value_name="จำนวนแผ่น (Pcs)",
-    )
-    leader_defect_long["ประเภทตำหนิ"] = leader_defect_long["ประเภทตำหนิ"].str.replace("ตำหนิ::", "", regex=False)
-    leader_defect_detail = (
-        leader_defect_long.groupby(["หัวหน้ากะ", "ประเภทตำหนิ"])["จำนวนแผ่น (Pcs)"]
-        .sum()
-        .reset_index()
-    )
-    leader_defect_detail = leader_defect_detail[leader_defect_detail["จำนวนแผ่น (Pcs)"] > 0]
-    leader_defect_detail = leader_defect_detail.sort_values(
-        ["หัวหน้ากะ", "จำนวนแผ่น (Pcs)"], ascending=[True, False]
-    )
-    leader_defect_detail.index = range(1, len(leader_defect_detail) + 1)
-    st.dataframe(_table_header_style(leader_defect_detail.style), use_container_width=True, height=350)
+
+def _highlight_over_target_row(row):
+    if row["% ตำหนิ"] > DEFECT_TARGET_PCT:
+        return ["color:#E0304F; font-weight:700;"] * len(row)
+    return [""] * len(row)
+
+
+st.dataframe(
+    _table_header_style(
+        leader_grp.style.format({
+            "ยอดไม้เข้าขัด (m³)": "{:,.2f}",
+            "ตำหนิหลังขัด (m³)": "{:,.2f}",
+            "% ตำหนิ": "{:.2f}%",
+        }).apply(_highlight_over_target_row, axis=1)
+    ),
+    use_container_width=True,
+)
+
+fig2 = px.bar(
+    leader_grp,
+    x="หัวหน้ากะ",
+    y="% ตำหนิ",
+    text="% ตำหนิ",
+    color_discrete_sequence=[CHART_COLOR],
+)
+fig2.update_traces(texttemplate="%{text:.2f}%", textposition="outside")
+fig2.update_layout(height=300, margin=dict(l=10, r=10, t=10, b=10))
+st.plotly_chart(fig2, use_container_width=True)
+
+st.caption("รายละเอียดตำหนิแยกตามหัวหน้ากะและประเภทตำหนิ")
+leader_defect_long = fdf.melt(
+    id_vars=["หัวหน้ากะ"],
+    value_vars=defect_cols,
+    var_name="ประเภทตำหนิ",
+    value_name="จำนวนแผ่น (Pcs)",
+)
+leader_defect_long["ประเภทตำหนิ"] = leader_defect_long["ประเภทตำหนิ"].str.replace("ตำหนิ::", "", regex=False)
+leader_defect_detail = (
+    leader_defect_long.groupby(["หัวหน้ากะ", "ประเภทตำหนิ"])["จำนวนแผ่น (Pcs)"]
+    .sum()
+    .reset_index()
+)
+leader_defect_detail = leader_defect_detail[leader_defect_detail["จำนวนแผ่น (Pcs)"] > 0]
+leader_defect_detail = leader_defect_detail.sort_values(
+    ["หัวหน้ากะ", "จำนวนแผ่น (Pcs)"], ascending=[True, False]
+)
+leader_defect_detail.index = range(1, len(leader_defect_detail) + 1)
+st.dataframe(_table_header_style(leader_defect_detail.style), use_container_width=True, height=350)
 
 st.divider()
 
