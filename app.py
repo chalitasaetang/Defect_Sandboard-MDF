@@ -240,7 +240,10 @@ with left:
         top5_table = top5_display.reset_index()
         top5_table.columns = ["ประเภทตำหนิ", "จำนวนแผ่น (Pcs)"]
         top5_table.index = top5_table.index + 1
-        st.dataframe(_table_header_style(top5_table.style), use_container_width=True)
+        st.dataframe(
+            _table_header_style(top5_table.style.format({"จำนวนแผ่น (Pcs)": "{:,.0f}"})),
+            use_container_width=True,
+        )
 
 # ---------- แนวโน้มรายวันของ Top 5 ตำหนิ ----------
 top5_trend_wide = None  # DataFrame index=date, columns=ชื่อตำหนิ (Top5) -- ใช้ซ้ำตอนสร้าง JPG ด้วย
@@ -257,6 +260,11 @@ with right:
 
         trend_long = trend_df.melt(id_vars="date", var_name="ประเภทตำหนิ", value_name="จำนวนแผ่น (Pcs)")
 
+        # สีเส้นแต่ละตำหนิ: เลือกให้ตัดกันชัดเจน หลีกเลี่ยงเฉดใกล้เคียงกัน (เช่น เขียว-เขียว)
+        TREND_LINE_COLORS = ["#09093C", "#E0304F", "#00B4D8", "#F2A900", "#4CAF50"]
+        color_map = {name: TREND_LINE_COLORS[i % len(TREND_LINE_COLORS)]
+                     for i, name in enumerate(top5_display.index)}
+
         fig_trend = px.line(
             trend_long,
             x="date",
@@ -264,6 +272,7 @@ with right:
             color="ประเภทตำหนิ",
             markers=True,
             labels={"date": "วันที่"},
+            color_discrete_map=color_map,
         )
         fig_trend.update_layout(
             height=350,
@@ -335,7 +344,10 @@ leader_defect_detail = leader_defect_detail.sort_values(
     ["หัวหน้ากะ", "จำนวนแผ่น (Pcs)"], ascending=[True, False]
 )
 leader_defect_detail.index = range(1, len(leader_defect_detail) + 1)
-st.dataframe(_table_header_style(leader_defect_detail.style), use_container_width=True, height=350)
+st.dataframe(
+    _table_header_style(leader_defect_detail.style.format({"จำนวนแผ่น (Pcs)": "{:,.0f}"})),
+    use_container_width=True, height=350,
+)
 
 st.divider()
 
@@ -358,7 +370,10 @@ else:
         )
         tech_sum.columns = ["Operator เครื่องขัด", "จำนวนแผ่น (Pcs)"]
         tech_sum.index = tech_sum.index + 1
-        st.dataframe(_table_header_style(tech_sum.style), use_container_width=True)
+        st.dataframe(
+            _table_header_style(tech_sum.style.format({"จำนวนแผ่น (Pcs)": "{:,.0f}"})),
+            use_container_width=True,
+        )
 
         defect_type_sum = (
             ftech_df.groupby("defect_type")["qty"]
@@ -389,7 +404,10 @@ else:
         )
         detail.columns = ["Operator เครื่องขัด", "ประเภทตำหนิ", "จำนวนแผ่น (Pcs)"]
         detail.index = range(1, len(detail) + 1)
-        st.dataframe(_table_header_style(detail.style), use_container_width=True, height=350)
+        st.dataframe(
+            _table_header_style(detail.style.format({"จำนวนแผ่น (Pcs)": "{:,.0f}"})),
+            use_container_width=True, height=350,
+        )
 
 st.divider()
 
