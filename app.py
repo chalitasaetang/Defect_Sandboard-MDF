@@ -153,12 +153,14 @@ def _kpi_font_size(value_text, base_rem=2.1, min_rem=1.1):
 
 def _kpi_box_html(value_text, label_text, box_bg, box_text_color, box_subtext_color):
     font_size = _kpi_font_size(value_text)
-    return f"""
-    <div style="background:{box_bg}; border-radius:8px; padding:16px 20px; min-height:88px; display:flex; flex-direction:column; justify-content:center;">
-        <div style="font-size:{font_size}rem; font-weight:700; color:{box_text_color}; line-height:1.2; white-space:nowrap;">{value_text}</div>
-        <div style="font-size:0.875rem; color:{box_subtext_color}; margin-top:2px;">{label_text}</div>
-    </div>
-    """
+    return (
+        f'<div style="background:{box_bg}; border-radius:8px; padding:16px 20px; min-height:88px; '
+        f'display:flex; flex-direction:column; justify-content:center;">'
+        f'<div style="font-size:{font_size}rem; font-weight:700; color:{box_text_color}; '
+        f'line-height:1.2; white-space:nowrap;">{value_text}</div>'
+        f'<div style="font-size:0.875rem; color:{box_subtext_color}; margin-top:2px;">{label_text}</div>'
+        f'</div>'
+    )
 
 
 total_cu = fdf["ยอดไม้เข้าขัด(CU)"].sum()
@@ -179,12 +181,10 @@ with k1:
         box_subtext = "#5C5F6D"
 
     st.markdown(
-        f"""
-        <div style="position:relative; margin-top:14px;">
-            <div style="position:absolute; top:-14px; right:10px; font-size:0.72rem; color:#5C5F6D; background:#FFFFFF; padding:0 4px;">Target &le; {DEFECT_TARGET_PCT:.0f}%</div>
-            {_kpi_box_html(f"{pct_defect:.2f} %", "% ตำหนิหลังขัด", box_bg, box_text, box_subtext)}
-        </div>
-        """,
+        f'<div style="position:relative; margin-top:14px;">'
+        f'<div style="position:absolute; top:-14px; right:10px; font-size:0.72rem; color:#5C5F6D; background:#FFFFFF; padding:0 4px;">Target &le; {DEFECT_TARGET_PCT:.0f}%</div>'
+        f'{_kpi_box_html(f"{pct_defect:.2f} %", "% ตำหนิหลังขัด", box_bg, box_text, box_subtext)}'
+        f'</div>',
         unsafe_allow_html=True,
     )
 
@@ -193,11 +193,9 @@ with k2:
     kpi2_text = "#5A32B5" if is_monthly_period else "#31333F"
     kpi2_subtext = "#5C5F6D"
     st.markdown(
-        f"""
-        <div style="margin-top:14px;">
-            {_kpi_box_html(f"{total_cu:,.2f}", "ยอดไม้เข้าขัดทั้งหมด (m³)", kpi2_bg, kpi2_text, kpi2_subtext)}
-        </div>
-        """,
+        f'<div style="margin-top:14px;">'
+        f'{_kpi_box_html(f"{total_cu:,.2f}", "ยอดไม้เข้าขัดทั้งหมด (m³)", kpi2_bg, kpi2_text, kpi2_subtext)}'
+        f'</div>',
         unsafe_allow_html=True,
     )
 
@@ -206,11 +204,9 @@ with k3:
     kpi3_text = "#5A32B5" if is_monthly_period else "#31333F"
     kpi3_subtext = "#5C5F6D"
     st.markdown(
-        f"""
-        <div style="margin-top:14px;">
-            {_kpi_box_html(f"{total_defect:,.2f}", "ตำหนิหลังขัดทั้งหมด (m³)", kpi3_bg, kpi3_text, kpi3_subtext)}
-        </div>
-        """,
+        f'<div style="margin-top:14px;">'
+        f'{_kpi_box_html(f"{total_defect:,.2f}", "ตำหนิหลังขัดทั้งหมด (m³)", kpi3_bg, kpi3_text, kpi3_subtext)}'
+        f'</div>',
         unsafe_allow_html=True,
     )
 
