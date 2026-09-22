@@ -32,9 +32,9 @@ GREY_LINE = colors.HexColor("#CCCCCC")
 
 # ---------- Theme: Sky blue (ใช้เมื่อเป็นรายงานประจำเดือน, is_monthly=True) ----------
 # ครอบคลุมทุกจุดยกเว้นกล่อง KPI แรก (% ตำหนิหลังขัด) ซึ่งคงสีเขียว/แดงเดิมเสมอเพื่อสื่อ target
-ACCENT2 = colors.HexColor("#96D4ED")
-ACCENT2_DARK = colors.HexColor("#527482")
-ACCENT2_LIGHT = colors.HexColor("#E4F4FA")
+ACCENT2 = colors.HexColor("#09093C")
+ACCENT2_DARK = colors.HexColor("#09093C")
+ACCENT2_LIGHT = colors.HexColor("#E2E2ED")
 
 
 def _theme_colors(is_monthly):
@@ -198,13 +198,12 @@ def _header_footer(canvas, doc, title_text, period_text, is_monthly=False):
     canvas.rect(0, page_h - 32 * mm, page_w, 3, fill=1, stroke=0)
 
     canvas.setFont("Sarabun-Bold", 18)
-    title_color = colors.HexColor("#0F2A38") if is_monthly else colors.white
+    title_color = colors.white
     canvas.setFillColor(title_color)
     canvas.drawString(20 * mm, page_h - 15 * mm, title_text)
 
     canvas.setFont("Sarabun", 12)
-    subtitle_color = accent_dark if is_monthly else colors.HexColor("#D8F3EA")
-    canvas.setFillColor(subtitle_color)
+    canvas.setFillColor(colors.HexColor("#D8F3EA"))
     canvas.drawString(20 * mm, page_h - 22 * mm, period_text)
 
     # Footer
@@ -236,9 +235,9 @@ def generate_pdf_report(
     _ensure_fonts()
     styles = _styles(is_monthly=is_monthly)
     accent, accent_dark, accent_light = _theme_colors(is_monthly)
-    chart_color = "#96D4ED" if is_monthly else "#009B77"
-    chart_text_color = "#527482" if is_monthly else "#00694A"
-    table_header_text_color = accent_dark if is_monthly else colors.white
+    chart_color = "#09093C" if is_monthly else "#009B77"
+    chart_text_color = "#09093C" if is_monthly else "#00694A"
+    table_header_text_color = colors.white
 
     report_title = "รายงานสรุปตำหนิหลังขัด" + (f" {production_line}" if production_line else "")
 
