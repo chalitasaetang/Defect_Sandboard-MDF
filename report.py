@@ -157,7 +157,7 @@ def _make_bar_chart_png(labels, values, color="#009B77", text_color=None,
 
 
 def _df_to_table(df_display, col_widths, header_bg=VIRIDIAN, row_stripe=VIRIDIAN_LIGHT,
-                   align_last_right=True, red_row_indices=None):
+                   header_text_color=colors.white, align_last_right=True, red_row_indices=None):
     data = [list(df_display.columns)] + df_display.values.tolist()
     t = Table(data, colWidths=col_widths, repeatRows=1)
     style = [
@@ -165,7 +165,7 @@ def _df_to_table(df_display, col_widths, header_bg=VIRIDIAN, row_stripe=VIRIDIAN
         ("FONTNAME", (0, 1), (-1, -1), "Sarabun"),
         ("FONTSIZE", (0, 0), (-1, -1), 9.5),
         ("BACKGROUND", (0, 0), (-1, 0), header_bg),
-        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+        ("TEXTCOLOR", (0, 0), (-1, 0), header_text_color),
         ("ALIGN", (0, 0), (-1, 0), "CENTER"),
         ("ALIGN", (1, 1), (-1, -1), "RIGHT" if align_last_right else "LEFT"),
         ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
@@ -198,7 +198,7 @@ def _header_footer(canvas, doc, title_text, period_text, is_monthly=False):
     canvas.rect(0, page_h - 32 * mm, page_w, 3, fill=1, stroke=0)
 
     canvas.setFont("Sarabun-Bold", 18)
-    title_color = accent_dark if is_monthly else colors.white
+    title_color = colors.HexColor("#0F2A38") if is_monthly else colors.white
     canvas.setFillColor(title_color)
     canvas.drawString(20 * mm, page_h - 15 * mm, title_text)
 
@@ -238,6 +238,7 @@ def generate_pdf_report(
     accent, accent_dark, accent_light = _theme_colors(is_monthly)
     chart_color = "#96D4ED" if is_monthly else "#009B77"
     chart_text_color = "#527482" if is_monthly else "#00694A"
+    table_header_text_color = accent_dark if is_monthly else colors.white
 
     report_title = "รายงานสรุปตำหนิหลังขัด" + (f" {production_line}" if production_line else "")
 
@@ -370,7 +371,7 @@ def generate_pdf_report(
         top5_df = top5_series.reset_index()
         top5_df.columns = ["ประเภทตำหนิ", "จำนวนแผ่น (Pcs)"]
         top5_df["จำนวนแผ่น (Pcs)"] = top5_df["จำนวนแผ่น (Pcs)"].map(lambda x: f"{x:,.0f}")
-        story.append(_df_to_table(top5_df, col_widths=[120 * mm, 50 * mm], header_bg=accent, row_stripe=accent_light))
+        story.append(_df_to_table(top5_df, col_widths=[120 * mm, 50 * mm], header_bg=accent, row_stripe=accent_light, header_text_color=table_header_text_color))
     else:
         story.append(Paragraph("ไม่มีข้อมูลตำหนิรายชนิดในช่วงวันที่นี้", styles["body"]))
 
@@ -400,7 +401,7 @@ def generate_pdf_report(
             ld["% ตำหนิ"] = ld["% ตำหนิ"].map(lambda x: f"{x:.2f}%")
         story.append(_df_to_table(
             ld, col_widths=[45 * mm, 45 * mm, 45 * mm, 35 * mm],
-            header_bg=accent, row_stripe=accent_light,
+            header_bg=accent, row_stripe=accent_light, header_text_color=table_header_text_color,
             red_row_indices=red_row_indices,
         ))
     else:
@@ -416,7 +417,7 @@ def generate_pdf_report(
         left_tbl_df = tech_summary_df.copy()
         left_tbl_df.columns = ["Operator เครื่องขัด", "จำนวนแผ่น (Pcs)"]
         left_tbl_df["จำนวนแผ่น (Pcs)"] = left_tbl_df["จำนวนแผ่น (Pcs)"].map(lambda x: f"{x:,.0f}")
-        story.append(_df_to_table(left_tbl_df, col_widths=[85 * mm, 85 * mm], header_bg=accent, row_stripe=accent_light))
+        story.append(_df_to_table(left_tbl_df, col_widths=[85 * mm, 85 * mm], header_bg=accent, row_stripe=accent_light, header_text_color=table_header_text_color))
         story.append(Spacer(1, 8))
 
         if tech_defecttype_df is not None and len(tech_defecttype_df) > 0:
@@ -446,7 +447,7 @@ def generate_pdf_report(
         sd["% ตำหนิรวม"] = sd["% ตำหนิรวม"].map(lambda x: f"{x:.2f}%")
         story.append(_df_to_table(
             sd, col_widths=[65 * mm, 55 * mm, 55 * mm],
-            header_bg=accent, row_stripe=accent_light,
+            header_bg=accent, row_stripe=accent_light, header_text_color=table_header_text_color,
             red_row_indices=source_red_rows,
         ))
     else:
