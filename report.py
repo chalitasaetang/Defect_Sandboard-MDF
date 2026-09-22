@@ -52,6 +52,23 @@ def _ensure_fonts():
     _fonts_registered = True
 
 
+def _kpi_font_size(value_text, box_width_pt=42 * mm, cell_padding_pt=12,
+                     base_size=26, min_size=11, font_name="Sarabun-Bold"):
+    """
+    คำนวณขนาดฟอนต์ (pt) ให้ตัวเลข KPI พอดี 1 บรรทัดในกล่องกว้าง box_width_pt เสมอ
+    วัดความกว้างข้อความจริงด้วย pdfmetrics เทียบกับพื้นที่ว่างในกล่อง (หัก padding ซ้าย-ขวา)
+    แล้วลดขนาดฟอนต์ลงทีละขั้นจนกว่าจะพอดี
+    """
+    avail_width = box_width_pt - cell_padding_pt
+    size = base_size
+    while size > min_size:
+        text_width = pdfmetrics.stringWidth(value_text, font_name, size)
+        if text_width <= avail_width:
+            break
+        size -= 0.5
+    return size
+
+
 def _styles():
     ss = getSampleStyleSheet()
     styles = {
@@ -227,8 +244,14 @@ def generate_pdf_report(
         pct_value_color = VIRIDIAN_DARK
         pct_label_color = GREY_TEXT
 
+    pct_value_text = f"{pct_defect:.2f}%"
+    total_cu_text = f"{total_cu:,.2f}"
+    total_defect_text = f"{total_defect:,.2f}"
+    n_days_text = f"{n_days}"
+
     pct_value_style = ParagraphStyle(
         "PctKpiValue", parent=styles["kpi_value"], textColor=pct_value_color,
+        fontSize=_kpi_font_size(pct_value_text), leading=_kpi_font_size(pct_value_text) * 1.15,
     )
     pct_label_style = ParagraphStyle(
         "PctKpiLabel", parent=styles["kpi_label"], textColor=pct_label_color,
@@ -236,6 +259,19 @@ def generate_pdf_report(
     pct_target_style = ParagraphStyle(
         "PctKpiTarget", fontName="Sarabun", fontSize=7.5,
         textColor=colors.HexColor("#5C5F6D"), alignment=TA_RIGHT,
+    )
+
+    total_cu_style = ParagraphStyle(
+        "TotalCuKpiValue", parent=styles["kpi_value"],
+        fontSize=_kpi_font_size(total_cu_text), leading=_kpi_font_size(total_cu_text) * 1.15,
+    )
+    total_defect_style = ParagraphStyle(
+        "TotalDefectKpiValue", parent=styles["kpi_value"],
+        fontSize=_kpi_font_size(total_defect_text), leading=_kpi_font_size(total_defect_text) * 1.15,
+    )
+    n_days_style = ParagraphStyle(
+        "NDaysKpiValue", parent=styles["kpi_value"],
+        fontSize=_kpi_font_size(n_days_text), leading=_kpi_font_size(n_days_text) * 1.15,
     )
 
     # แถวป้าย "Target <= 3%" ลอยอยู่เหนือกล่องแรก (มุมบนขวาด้านนอกกล่อง)
@@ -252,7 +288,7 @@ def generate_pdf_report(
     story.append(target_label_row)
 
     pct_cell_data = [
-        [Paragraph(f"{pct_defect:.2f}%", pct_value_style)],
+        [Paragraph(pct_value_text, pct_value_style)],
         [Paragraph("% ตำหนิหลังขัด", pct_label_style)],
     ]
     pct_cell_table = Table(pct_cell_data, colWidths=[42 * mm])
@@ -269,9 +305,9 @@ def generate_pdf_report(
     kpi_data = [
         [
             pct_cell_table,
-            Paragraph(f"{total_cu:,.2f}", styles["kpi_value"]),
-            Paragraph(f"{total_defect:,.2f}", styles["kpi_value"]),
-            Paragraph(f"{n_days}", styles["kpi_value"]),
+            Paragraph(total_cu_text, total_cu_style),
+            Paragraph(total_defect_text, total_defect_style),
+            Paragraph(n_days_text, n_days_style),
         ],
         [
             "",
