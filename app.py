@@ -110,6 +110,30 @@ st.caption(f"{period_label_text} ({n_days_with_data} วันที่มีข
 # สีกราฟ: ม่วง เมื่อเป็นรายงานประจำเดือน (28-31 วันในเดือนเดียวกัน), เขียวเดิมเมื่อเป็นช่วงวันที่ทั่วไป
 CHART_COLOR = "#7B4FE0" if is_monthly_period else "#009B77"
 
+
+def _section_header(text):
+    """
+    หัวข้อ section แบบ custom (แทน st.subheader) เพื่อคุมสีให้เปลี่ยนเป็นม่วงได้
+    เมื่อเป็นรายงานประจำเดือน (is_monthly_period=True)
+    """
+    color = "#5A32B5" if is_monthly_period else "#009B77"
+    st.markdown(
+        f'<h3 style="color:{color}; font-size:1.5rem; font-weight:600; margin-top:0.5rem; margin-bottom:0.5rem;">{text}</h3>',
+        unsafe_allow_html=True,
+    )
+
+
+def _table_header_style(styler):
+    """
+    บังคับสีพื้นหลัง/ตัวหนังสือหัวตารางให้เป็นม่วงเมื่อเป็นรายงานประจำเดือน
+    เขียวตามปกติเมื่อไม่ใช่ (ใช้ set_table_styles คุม <th> โดยตรง ไม่ผูกกับ config.toml ของ Streamlit)
+    """
+    header_bg = "#7B4FE0" if is_monthly_period else "#009B77"
+    return styler.set_table_styles(
+        [{"selector": "th", "props": [("background-color", header_bg), ("color", "white")]}],
+        overwrite=False,
+    )
+
 # ---------- KPI: % ตำหนิหลังขัด ----------
 DEFECT_TARGET_PCT = 3.0
 
@@ -165,20 +189,26 @@ with k1:
     )
 
 with k2:
+    kpi2_bg = "#F1ECFB" if is_monthly_period else "#F0F2F6"
+    kpi2_text = "#5A32B5" if is_monthly_period else "#31333F"
+    kpi2_subtext = "#5C5F6D"
     st.markdown(
         f"""
         <div style="margin-top:14px;">
-            {_kpi_box_html(f"{total_cu:,.2f}", "ยอดไม้เข้าขัดทั้งหมด (m³)", "#F0F2F6", "#31333F", "#5C5F6D")}
+            {_kpi_box_html(f"{total_cu:,.2f}", "ยอดไม้เข้าขัดทั้งหมด (m³)", kpi2_bg, kpi2_text, kpi2_subtext)}
         </div>
         """,
         unsafe_allow_html=True,
     )
 
 with k3:
+    kpi3_bg = "#F1ECFB" if is_monthly_period else "#F0F2F6"
+    kpi3_text = "#5A32B5" if is_monthly_period else "#31333F"
+    kpi3_subtext = "#5C5F6D"
     st.markdown(
         f"""
         <div style="margin-top:14px;">
-            {_kpi_box_html(f"{total_defect:,.2f}", "ตำหนิหลังขัดทั้งหมด (m³)", "#F0F2F6", "#31333F", "#5C5F6D")}
+            {_kpi_box_html(f"{total_defect:,.2f}", "ตำหนิหลังขัดทั้งหมด (m³)", kpi3_bg, kpi3_text, kpi3_subtext)}
         </div>
         """,
         unsafe_allow_html=True,
@@ -190,7 +220,7 @@ st.divider()
 left, right = st.columns([1.1, 1])
 
 with left:
-    st.subheader("🔝 Top 5 ตำหนิ (จำนวนแผ่นรวม)")
+    _section_header("🔝 Top 5 ตำหนิ (จำนวนแผ่นรวม)")
     defect_sums = fdf[defect_cols].sum().sort_values(ascending=False)
     defect_sums = defect_sums[defect_sums > 0]
     top5 = defect_sums.head(5)
@@ -213,11 +243,11 @@ with left:
         top5_table = top5_display.reset_index()
         top5_table.columns = ["ประเภทตำหนิ", "จำนวนแผ่น (Pcs)"]
         top5_table.index = top5_table.index + 1
-        st.dataframe(top5_table, use_container_width=True)
+        st.dataframe(_table_header_style(top5_table.style), use_container_width=True)
 
 # ---------- % ตำหนิแยกตามหัวหน้ากะ ----------
 with right:
-    st.subheader("👷 % ตำหนิหลังขัด แยกตามหัวหน้ากะ")
+    _section_header("👷 % ตำหนิหลังขัด แยกตามหัวหน้ากะ")
     leader_grp = fdf.groupby("หัวหน้ากะ")[["ยอดไม้เข้าขัด(CU)", "ตำหนิหลังขัด(คิว)"]].sum()
     leader_grp = leader_grp[leader_grp["ยอดไม้เข้าขัด(CU)"] > 0]  # ตัดหัวหน้ากะที่ไม่มียอดเข้าขัด (หารไม่ได้)
     leader_grp["% ตำหนิ"] = (leader_grp["ตำหนิหลังขัด(คิว)"] / leader_grp["ยอดไม้เข้าขัด(CU)"] * 100).round(2)
@@ -235,11 +265,13 @@ with right:
         return [""] * len(row)
 
     st.dataframe(
-        leader_grp.style.format({
-            "ยอดไม้เข้าขัด (m³)": "{:,.2f}",
-            "ตำหนิหลังขัด (m³)": "{:,.2f}",
-            "% ตำหนิ": "{:.2f}%",
-        }).apply(_highlight_over_target_row, axis=1),
+        _table_header_style(
+            leader_grp.style.format({
+                "ยอดไม้เข้าขัด (m³)": "{:,.2f}",
+                "ตำหนิหลังขัด (m³)": "{:,.2f}",
+                "% ตำหนิ": "{:.2f}%",
+            }).apply(_highlight_over_target_row, axis=1)
+        ),
         use_container_width=True,
     )
 
@@ -272,17 +304,17 @@ with right:
         ["หัวหน้ากะ", "จำนวนแผ่น (Pcs)"], ascending=[True, False]
     )
     leader_defect_detail.index = range(1, len(leader_defect_detail) + 1)
-    st.dataframe(leader_defect_detail, use_container_width=True, height=350)
+    st.dataframe(_table_header_style(leader_defect_detail.style), use_container_width=True, height=350)
 
 st.divider()
 
-# ---------- ตำหนิเครื่องขัด ----------
-st.subheader("🔧 ตำหนิเครื่องขัด")
-tech_sum = pd.DataFrame(columns=["ช่างเครื่องขัด", "จำนวนแผ่น (Pcs)"])
+# ---------- ตำหนิจากเครื่องขัด ----------
+_section_header("🔧 ตำหนิจากเครื่องขัด")
+tech_sum = pd.DataFrame(columns=["Operator เครื่องขัด", "จำนวนแผ่น (Pcs)"])
 defect_type_sum = pd.DataFrame(columns=["ประเภทตำหนิ", "จำนวนแผ่น (Pcs)"])
 
 if ftech_df.empty:
-    st.info("ไม่มีข้อมูลระบุชื่อช่างเครื่องขัดในช่วงวันที่นี้")
+    st.info("ไม่มีข้อมูลระบุชื่อ Operator เครื่องขัดในช่วงวันที่นี้")
 else:
     tech_col, detail_col = st.columns([1, 1.3])
 
@@ -293,9 +325,9 @@ else:
             .sort_values(ascending=False)
             .reset_index()
         )
-        tech_sum.columns = ["ช่างเครื่องขัด", "จำนวนแผ่น (Pcs)"]
+        tech_sum.columns = ["Operator เครื่องขัด", "จำนวนแผ่น (Pcs)"]
         tech_sum.index = tech_sum.index + 1
-        st.dataframe(tech_sum, use_container_width=True)
+        st.dataframe(_table_header_style(tech_sum.style), use_container_width=True)
 
         defect_type_sum = (
             ftech_df.groupby("defect_type")["qty"]
@@ -324,14 +356,14 @@ else:
             .reset_index()
             .sort_values(["technician", "qty"], ascending=[True, False])
         )
-        detail.columns = ["ช่างเครื่องขัด", "ประเภทตำหนิ", "จำนวนแผ่น (Pcs)"]
+        detail.columns = ["Operator เครื่องขัด", "ประเภทตำหนิ", "จำนวนแผ่น (Pcs)"]
         detail.index = range(1, len(detail) + 1)
-        st.dataframe(detail, use_container_width=True, height=350)
+        st.dataframe(_table_header_style(detail.style), use_container_width=True, height=350)
 
 st.divider()
 
 # ---------- สรุปตำหนิแยกตามแหล่งที่มา (Press / เครื่องขัด / แตกรถยก / อื่นๆ) ----------
-st.subheader("📦 สรุปตำหนิแยกตามแหล่งที่มา")
+_section_header("📦 สรุปตำหนิแยกตามแหล่งที่มา")
 
 GROUP_ORDER = ["Press", "เครื่องขัด", "แตกรถยก", "อื่นๆ"]
 
@@ -359,10 +391,12 @@ def _highlight_over_target_source_row(row):
     return [""] * len(row)
 
 st.dataframe(
-    source_summary_df.style.format({
-        "จำนวนแผ่น (Pcs)": "{:,.0f}",
-        "% ตำหนิรวม": "{:.2f}%",
-    }).apply(_highlight_over_target_source_row, axis=1),
+    _table_header_style(
+        source_summary_df.style.format({
+            "จำนวนแผ่น (Pcs)": "{:,.0f}",
+            "% ตำหนิรวม": "{:.2f}%",
+        }).apply(_highlight_over_target_source_row, axis=1)
+    ),
     use_container_width=True,
 )
 
