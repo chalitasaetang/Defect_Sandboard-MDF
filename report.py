@@ -23,12 +23,13 @@ from reportlab.platypus import (
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 
-# ---------- Theme: Viridian green ----------
+# ---------- Theme: Viridian green (default) ----------
 VIRIDIAN = colors.HexColor("#009B77")
 VIRIDIAN_DARK = colors.HexColor("#00694A")
 VIRIDIAN_LIGHT = colors.HexColor("#E6F5F0")
 GREY_TEXT = colors.HexColor("#333333")
 GREY_LINE = colors.HexColor("#CCCCCC")
+
 
 _FONT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "fonts")
 _FONT_REGULAR_PATH = os.path.join(_FONT_DIR, "Sarabun-Regular.ttf")
@@ -59,8 +60,8 @@ def _styles():
             textColor=colors.white, alignment=TA_LEFT, leading=26,
         ),
         "subtitle": ParagraphStyle(
-            "ReportSubtitle", fontName="Sarabun", fontSize=11,
-            textColor=colors.HexColor("#D8F3EA"), alignment=TA_LEFT, leading=15,
+            "ReportSubtitle", fontName="Sarabun", fontSize=12,
+            textColor=colors.HexColor("#D8F3EA"), alignment=TA_LEFT, leading=16,
         ),
         "section": ParagraphStyle(
             "Section", fontName="Sarabun-Bold", fontSize=13,
@@ -85,11 +86,12 @@ def _styles():
     return styles
 
 
-def _make_bar_chart_png(labels, values, color=VIRIDIAN.hexval()[2:] if hasattr(VIRIDIAN, "hexval") else "#009B77",
+def _make_bar_chart_png(labels, values, color="#009B77",
                           title="", horizontal=False, figsize=(6.6, 3.2)):
     _ensure_fonts()
     fig, ax = plt.subplots(figsize=figsize, dpi=200)
-    bar_color = "#009B77"
+    bar_color = color
+    text_color = color
     if horizontal:
         y_pos = range(len(labels))
         ax.barh(list(y_pos), values, color=bar_color)
@@ -97,7 +99,7 @@ def _make_bar_chart_png(labels, values, color=VIRIDIAN.hexval()[2:] if hasattr(V
         ax.set_yticklabels(labels, fontsize=9)
         ax.invert_yaxis()
         for i, v in enumerate(values):
-            ax.text(v, i, f" {v:,.0f}", va="center", fontsize=8.5, color="#00694A")
+            ax.text(v, i, f" {v:,.0f}", va="center", fontsize=8.5, color=text_color)
         ax.spines[["top", "right"]].set_visible(False)
     else:
         x_pos = range(len(labels))
@@ -105,12 +107,12 @@ def _make_bar_chart_png(labels, values, color=VIRIDIAN.hexval()[2:] if hasattr(V
         ax.set_xticks(list(x_pos))
         ax.set_xticklabels(labels, fontsize=8, rotation=30, ha="right", rotation_mode="anchor")
         for i, v in enumerate(values):
-            ax.text(i, v, f"{v:,.0f}", ha="center", va="bottom", fontsize=8.5, color="#00694A")
+            ax.text(i, v, f"{v:,.0f}", ha="center", va="bottom", fontsize=8.5, color=text_color)
         ax.spines[["top", "right"]].set_visible(False)
         ax.margins(y=0.15)
 
     if title:
-        ax.set_title(title, fontsize=11, color="#00694A", pad=10, fontweight="bold")
+        ax.set_title(title, fontsize=11, color=text_color, pad=10, fontweight="bold")
     ax.tick_params(colors="#444444")
     fig.tight_layout()
     if not horizontal:
@@ -166,7 +168,7 @@ def _header_footer(canvas, doc, title_text, period_text):
     canvas.setFillColor(colors.white)
     canvas.drawString(20 * mm, page_h - 15 * mm, title_text)
 
-    canvas.setFont("Sarabun", 10.5)
+    canvas.setFont("Sarabun", 12)
     canvas.setFillColor(colors.HexColor("#D8F3EA"))
     canvas.drawString(20 * mm, page_h - 22 * mm, period_text)
 
@@ -188,15 +190,17 @@ def generate_pdf_report(
     n_days,
     top5_series,          # pandas Series: index=defect name, values=qty (already top 5, descending)
     leader_df,             # DataFrame with columns: หัวหน้ากะ, ยอดไม้เข้าขัด (m³), ตำหนิหลังขัด (m³), % ตำหนิ
-    tech_summary_df,       # DataFrame with columns: Operator เครื่องขัด, จำนวนแผ่น (Pcs)  (may be empty)
+    tech_summary_df,       # DataFrame with columns: ช่างเครื่องขัด, จำนวนแผ่น (Pcs)  (may be empty)
     tech_defecttype_df,    # DataFrame with columns: ประเภทตำหนิ, จำนวนแผ่น (Pcs)   (may be empty)
     generated_at_text,
     defect_target_pct=3.0,
     source_summary_df=None,  # DataFrame: แหล่งที่มาตำหนิ, จำนวนแผ่น (Pcs), % ตำหนิรวม
     production_line=None,   # e.g. "MDF LINE 2" -- appended to the report title when given
+    is_monthly=False,        # True เมื่อ period_text เป็น "ประจำเดือน ..." (28-31 วัน เดือนเดียวกัน) -> กราฟเป็นสีม่วง
 ):
     _ensure_fonts()
     styles = _styles()
+    chart_color = "#7B4FE0" if is_monthly else "#009B77"
 
     report_title = "รายงานสรุปตำหนิหลังขัด" + (f" {production_line}" if production_line else "")
 
@@ -303,7 +307,7 @@ def generate_pdf_report(
     if top5_series is not None and len(top5_series) > 0:
         labels = list(top5_series.index)
         values = list(top5_series.values)
-        chart_buf = _make_bar_chart_png(labels, values, horizontal=True, figsize=(6.6, 2.6))
+        chart_buf = _make_bar_chart_png(labels, values, color=chart_color, horizontal=True, figsize=(6.6, 2.6))
         story.append(Image(chart_buf, width=165 * mm, height=65 * mm))
         story.append(Spacer(1, 6))
 
@@ -348,12 +352,12 @@ def generate_pdf_report(
     story.append(Spacer(1, 16))
 
     # ---------- Machine operator (technician) breakdown ----------
-    story.append(Paragraph("ตำหนิจากเครื่องขัด", styles["section"]))
+    story.append(Paragraph("ตำหนิเครื่องขัด", styles["section"]))
     story.append(HRFlowable(width="100%", thickness=1, color=VIRIDIAN, spaceAfter=8))
 
     if tech_summary_df is not None and len(tech_summary_df) > 0:
         left_tbl_df = tech_summary_df.copy()
-        left_tbl_df.columns = ["Operator เครื่องขัด", "จำนวนแผ่น (Pcs)"]
+        left_tbl_df.columns = ["ช่างเครื่องขัด", "จำนวนแผ่น (Pcs)"]
         left_tbl_df["จำนวนแผ่น (Pcs)"] = left_tbl_df["จำนวนแผ่น (Pcs)"].map(lambda x: f"{x:,.0f}")
         story.append(_df_to_table(left_tbl_df, col_widths=[85 * mm, 85 * mm]))
         story.append(Spacer(1, 8))
@@ -361,10 +365,10 @@ def generate_pdf_report(
         if tech_defecttype_df is not None and len(tech_defecttype_df) > 0:
             labels = list(tech_defecttype_df.iloc[:, 0])
             values = list(tech_defecttype_df.iloc[:, 1])
-            chart_buf2 = _make_bar_chart_png(labels, values, horizontal=False, figsize=(6.6, 3.0))
+            chart_buf2 = _make_bar_chart_png(labels, values, color=chart_color, horizontal=False, figsize=(6.6, 3.0))
             story.append(Image(chart_buf2, width=165 * mm, height=72 * mm))
     else:
-        story.append(Paragraph("ไม่มีข้อมูลระบุชื่อ Operator เครื่องขัดในช่วงวันที่นี้", styles["body"]))
+        story.append(Paragraph("ไม่มีข้อมูลระบุชื่อช่างเครื่องขัดในช่วงวันที่นี้", styles["body"]))
 
     story.append(Spacer(1, 16))
 
