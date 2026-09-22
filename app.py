@@ -71,6 +71,27 @@ if fdf.empty:
 def be(d):
     return f"{d.day:02d}/{d.month:02d}/{(d.year + 543) % 100:02d}"
 
+THAI_MONTHS = [
+    "", "มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน",
+    "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม",
+]
+
+def _period_label(start_date, end_date):
+    """
+    คืนค่า (period_text, is_monthly)
+    - ถ้าช่วงวันที่อยู่ในเดือนเดียวกัน และจำนวนวัน (start ถึง end) >= 28 วัน
+      -> "ประจำเดือน <ชื่อเดือนไทย> <ปี พ.ศ.>" , is_monthly=True
+    - ไม่เช่นนั้น -> ช่วงวันที่แบบเดิม "ช่วงวันที่: dd/mm/yy - dd/mm/yy", is_monthly=False
+    """
+    n_selected_days = (end_date - start_date).days + 1
+    if start_date.month == end_date.month and n_selected_days >= 28:
+        month_name = THAI_MONTHS[start_date.month]
+        year_be_label = start_date.year + 543
+        return f"ประจำเดือน {month_name} {year_be_label}", True
+    else:
+        text = f"ช่วงวันที่: {be(start_date)} - {be(end_date)}"
+        return text, False
+
 # นับ "วันที่มีข้อมูล" เฉพาะวันในช่วงที่กรอง (ใช้ recorded_days จาก parser ซึ่งตัด Sheet
 # ที่เป็น template ว่างเปล่าออกแล้ว แต่ยังนับวันที่ระบุชัดว่า "ไม่ได้ขัดไม้" ด้วย)
 days_in_range = set(pd.date_range(start_date, end_date).day) if start_date.month == end_date.month else None
@@ -80,10 +101,41 @@ else:
     # ช่วงวันที่คร่อมเดือน (ไม่ควรเกิดในไฟล์นี้ที่มีเดือนเดียว) -> fallback ใช้ recorded_days ทั้งหมด
     n_days_with_data = len(recorded_days)
 
-st.caption(f"ช่วงข้อมูลที่แสดง: **{be(start_date if hasattr(start_date,'day') else pd.Timestamp(start_date))} - {be(end_date if hasattr(end_date,'day') else pd.Timestamp(end_date))}** ({n_days_with_data} วันที่มีข้อมูล)")
+_norm_start = start_date if hasattr(start_date, 'day') else pd.Timestamp(start_date)
+_norm_end = end_date if hasattr(end_date, 'day') else pd.Timestamp(end_date)
+period_label_text, is_monthly_period = _period_label(_norm_start, _norm_end)
+
+st.caption(f"{period_label_text} ({n_days_with_data} วันที่มีข้อมูล)")
+
+# สีกราฟ: ม่วง เมื่อเป็นรายงานประจำเดือน (28-31 วันในเดือนเดียวกัน), เขียวเดิมเมื่อเป็นช่วงวันที่ทั่วไป
+CHART_COLOR = "#7B4FE0" if is_monthly_period else "#009B77"
 
 # ---------- KPI: % ตำหนิหลังขัด ----------
 DEFECT_TARGET_PCT = 3.0
+
+def _kpi_font_size(value_text, base_rem=2.1, min_rem=1.1):
+    """
+    คำนวณขนาดฟอนต์ (rem) ให้ตัวเลขพอดี 1 บรรทัดเสมอ โดยลดขนาดลงตามความยาวข้อความ
+    ค่าเริ่มต้น (<=4 ตัวอักษร) ใช้ base_rem เต็ม แล้วลดลงทีละขั้นตามจำนวนตัวอักษรที่เกิน
+    (ใช้คู่กับ white-space:nowrap เพื่อไม่ให้ตกบรรทัดแม้ประมาณขนาดคลาดเคลื่อนเล็กน้อย)
+    """
+    n = len(value_text)
+    if n <= 4:
+        size = base_rem
+    else:
+        size = base_rem - (n - 4) * 0.11
+    return max(size, min_rem)
+
+
+def _kpi_box_html(value_text, label_text, box_bg, box_text_color, box_subtext_color):
+    font_size = _kpi_font_size(value_text)
+    return f"""
+    <div style="background:{box_bg}; border-radius:8px; padding:16px 20px; min-height:88px; display:flex; flex-direction:column; justify-content:center;">
+        <div style="font-size:{font_size}rem; font-weight:700; color:{box_text_color}; line-height:1.2; white-space:nowrap;">{value_text}</div>
+        <div style="font-size:0.875rem; color:{box_subtext_color}; margin-top:2px;">{label_text}</div>
+    </div>
+    """
+
 
 total_cu = fdf["ยอดไม้เข้าขัด(CU)"].sum()
 total_defect = fdf["ตำหนิหลังขัด(คิว)"].sum()
@@ -106,17 +158,31 @@ with k1:
         f"""
         <div style="position:relative; margin-top:14px;">
             <div style="position:absolute; top:-14px; right:10px; font-size:0.72rem; color:#5C5F6D; background:#FFFFFF; padding:0 4px;">Target &le; {DEFECT_TARGET_PCT:.0f}%</div>
-            <div style="background:{box_bg}; border-radius:8px; padding:16px 20px; min-height:88px;">
-                <div style="font-size:2.1rem; font-weight:700; color:{box_text}; line-height:1.2;">{pct_defect:.2f} %</div>
-                <div style="font-size:0.875rem; color:{box_subtext}; margin-top:2px;">% ตำหนิหลังขัด</div>
-            </div>
+            {_kpi_box_html(f"{pct_defect:.2f} %", "% ตำหนิหลังขัด", box_bg, box_text, box_subtext)}
         </div>
         """,
         unsafe_allow_html=True,
     )
 
-k2.metric("ยอดไม้เข้าขัดทั้งหมด (m³)", f"{total_cu:,.2f}")
-k3.metric("ตำหนิหลังขัดทั้งหมด (m³)", f"{total_defect:,.2f}")
+with k2:
+    st.markdown(
+        f"""
+        <div style="margin-top:14px;">
+            {_kpi_box_html(f"{total_cu:,.2f}", "ยอดไม้เข้าขัดทั้งหมด (m³)", "#F0F2F6", "#31333F", "#5C5F6D")}
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+with k3:
+    st.markdown(
+        f"""
+        <div style="margin-top:14px;">
+            {_kpi_box_html(f"{total_defect:,.2f}", "ตำหนิหลังขัดทั้งหมด (m³)", "#F0F2F6", "#31333F", "#5C5F6D")}
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
 st.divider()
 
@@ -138,6 +204,7 @@ with left:
             orientation="h",
             labels={"value": "จำนวนแผ่น (Pcs)", "index": "ประเภทตำหนิ"},
             text=top5_display[::-1].values,
+            color_discrete_sequence=[CHART_COLOR],
         )
         fig.update_traces(texttemplate="%{text:,.0f}", textposition="outside")
         fig.update_layout(showlegend=False, height=350, margin=dict(l=10, r=10, t=10, b=10))
@@ -181,6 +248,7 @@ with right:
         x="หัวหน้ากะ",
         y="% ตำหนิ",
         text="% ตำหนิ",
+        color_discrete_sequence=[CHART_COLOR],
     )
     fig2.update_traces(texttemplate="%{text:.2f}%", textposition="outside")
     fig2.update_layout(height=300, margin=dict(l=10, r=10, t=10, b=10))
@@ -208,13 +276,13 @@ with right:
 
 st.divider()
 
-# ---------- ตำหนิจากเครื่องขัด ----------
-st.subheader("🔧 ตำหนิจากเครื่องขัด")
-tech_sum = pd.DataFrame(columns=["Operator เครื่องขัด", "จำนวนแผ่น (Pcs)"])
+# ---------- ตำหนิเครื่องขัด ----------
+st.subheader("🔧 ตำหนิเครื่องขัด")
+tech_sum = pd.DataFrame(columns=["ช่างเครื่องขัด", "จำนวนแผ่น (Pcs)"])
 defect_type_sum = pd.DataFrame(columns=["ประเภทตำหนิ", "จำนวนแผ่น (Pcs)"])
 
 if ftech_df.empty:
-    st.info("ไม่มีข้อมูลระบุชื่อ Operator เครื่องขัดในช่วงวันที่นี้")
+    st.info("ไม่มีข้อมูลระบุชื่อช่างเครื่องขัดในช่วงวันที่นี้")
 else:
     tech_col, detail_col = st.columns([1, 1.3])
 
@@ -225,7 +293,7 @@ else:
             .sort_values(ascending=False)
             .reset_index()
         )
-        tech_sum.columns = ["Operator เครื่องขัด", "จำนวนแผ่น (Pcs)"]
+        tech_sum.columns = ["ช่างเครื่องขัด", "จำนวนแผ่น (Pcs)"]
         tech_sum.index = tech_sum.index + 1
         st.dataframe(tech_sum, use_container_width=True)
 
@@ -242,6 +310,7 @@ else:
             x="ประเภทตำหนิ",
             y="จำนวนแผ่น (Pcs)",
             text="จำนวนแผ่น (Pcs)",
+            color_discrete_sequence=[CHART_COLOR],
         )
         fig3.update_traces(texttemplate="%{text:,.0f}", textposition="outside")
         fig3.update_layout(height=300, margin=dict(l=10, r=10, t=10, b=10))
@@ -255,7 +324,7 @@ else:
             .reset_index()
             .sort_values(["technician", "qty"], ascending=[True, False])
         )
-        detail.columns = ["Operator เครื่องขัด", "ประเภทตำหนิ", "จำนวนแผ่น (Pcs)"]
+        detail.columns = ["ช่างเครื่องขัด", "ประเภทตำหนิ", "จำนวนแผ่น (Pcs)"]
         detail.index = range(1, len(detail) + 1)
         st.dataframe(detail, use_container_width=True, height=350)
 
@@ -306,7 +375,7 @@ st.divider()
 st.subheader("📥 ดาวน์โหลดรายงานสำหรับผู้บริหาร")
 st.caption("สร้างรายงานสรุปเป็นรูปภาพ JPG จัดรูปแบบสวยงาม ตามช่วงวันที่ที่เลือกอยู่ด้านบน")
 
-period_text = f"ช่วงวันที่: {be(start_date if hasattr(start_date,'day') else pd.Timestamp(start_date))} - {be(end_date if hasattr(end_date,'day') else pd.Timestamp(end_date))}"
+period_text = period_label_text
 
 if st.button("🖼️ สร้างรายงาน JPG", type="primary"):
     with st.spinner("กำลังสร้างรายงาน..."):
@@ -331,6 +400,7 @@ if st.button("🖼️ สร้างรายงาน JPG", type="primary"):
             source_summary_df=source_summary_for_pdf,
             production_line=production_line,
             generated_at_text=datetime.now().strftime("%d/%m/%Y %H:%M"),
+            is_monthly=is_monthly_period,
         )
 
         jpg_paths = pdf_to_jpgs(pdf_path, tempfile.gettempdir(), base_name="sanding_defect_report")
