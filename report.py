@@ -30,6 +30,19 @@ VIRIDIAN_LIGHT = colors.HexColor("#E6F5F0")
 GREY_TEXT = colors.HexColor("#333333")
 GREY_LINE = colors.HexColor("#CCCCCC")
 
+# ---------- Theme: Purple (ใช้เมื่อเป็นรายงานประจำเดือน, is_monthly=True) ----------
+# ครอบคลุมทุกจุดยกเว้นกล่อง KPI แรก (% ตำหนิหลังขัด) ซึ่งคงสีเขียว/แดงเดิมเสมอเพื่อสื่อ target
+PURPLE = colors.HexColor("#7B4FE0")
+PURPLE_DARK = colors.HexColor("#5A32B5")
+PURPLE_LIGHT = colors.HexColor("#F1ECFB")
+
+
+def _theme_colors(is_monthly):
+    """คืนค่า (accent, accent_dark, accent_light) ตามธีมที่ใช้งานอยู่"""
+    if is_monthly:
+        return PURPLE, PURPLE_DARK, PURPLE_LIGHT
+    return VIRIDIAN, VIRIDIAN_DARK, VIRIDIAN_LIGHT
+
 
 _FONT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "fonts")
 _FONT_REGULAR_PATH = os.path.join(_FONT_DIR, "Sarabun-Regular.ttf")
@@ -69,7 +82,8 @@ def _kpi_font_size(value_text, box_width_pt=42 * mm, cell_padding_pt=12,
     return size
 
 
-def _styles():
+def _styles(is_monthly=False):
+    accent, accent_dark, accent_light = _theme_colors(is_monthly)
     ss = getSampleStyleSheet()
     styles = {
         "title": ParagraphStyle(
@@ -82,14 +96,14 @@ def _styles():
         ),
         "section": ParagraphStyle(
             "Section", fontName="Sarabun-Bold", fontSize=13,
-            textColor=VIRIDIAN_DARK, spaceBefore=14, spaceAfter=8, leading=17,
+            textColor=accent_dark, spaceBefore=14, spaceAfter=8, leading=17,
         ),
         "body": ParagraphStyle(
             "Body", fontName="Sarabun", fontSize=10, textColor=GREY_TEXT, leading=14,
         ),
         "kpi_value": ParagraphStyle(
             "KpiValue", fontName="Sarabun-Bold", fontSize=26,
-            textColor=VIRIDIAN_DARK, alignment=TA_CENTER, leading=30,
+            textColor=accent_dark, alignment=TA_CENTER, leading=30,
         ),
         "kpi_label": ParagraphStyle(
             "KpiLabel", fontName="Sarabun", fontSize=9.5,
@@ -142,7 +156,8 @@ def _make_bar_chart_png(labels, values, color="#009B77",
     return buf
 
 
-def _df_to_table(df_display, col_widths, header_bg=VIRIDIAN, align_last_right=True, red_row_indices=None):
+def _df_to_table(df_display, col_widths, header_bg=VIRIDIAN, row_stripe=VIRIDIAN_LIGHT,
+                   align_last_right=True, red_row_indices=None):
     data = [list(df_display.columns)] + df_display.values.tolist()
     t = Table(data, colWidths=col_widths, repeatRows=1)
     style = [
@@ -155,7 +170,7 @@ def _df_to_table(df_display, col_widths, header_bg=VIRIDIAN, align_last_right=Tr
         ("ALIGN", (1, 1), (-1, -1), "RIGHT" if align_last_right else "LEFT"),
         ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
         ("GRID", (0, 0), (-1, -1), 0.5, GREY_LINE),
-        ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, VIRIDIAN_LIGHT]),
+        ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, row_stripe]),
         ("TOPPADDING", (0, 0), (-1, -1), 6),
         ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
         ("LEFTPADDING", (0, 0), (-1, -1), 8),
@@ -171,14 +186,15 @@ def _df_to_table(df_display, col_widths, header_bg=VIRIDIAN, align_last_right=Tr
     return t
 
 
-def _header_footer(canvas, doc, title_text, period_text):
+def _header_footer(canvas, doc, title_text, period_text, is_monthly=False):
     canvas.saveState()
     page_w, page_h = A4
+    accent, accent_dark, _ = _theme_colors(is_monthly)
 
     # Top banner
-    canvas.setFillColor(VIRIDIAN)
+    canvas.setFillColor(accent)
     canvas.rect(0, page_h - 32 * mm, page_w, 32 * mm, fill=1, stroke=0)
-    canvas.setFillColor(VIRIDIAN_DARK)
+    canvas.setFillColor(accent_dark)
     canvas.rect(0, page_h - 32 * mm, page_w, 3, fill=1, stroke=0)
 
     canvas.setFont("Sarabun-Bold", 18)
@@ -186,7 +202,8 @@ def _header_footer(canvas, doc, title_text, period_text):
     canvas.drawString(20 * mm, page_h - 15 * mm, title_text)
 
     canvas.setFont("Sarabun", 12)
-    canvas.setFillColor(colors.HexColor("#D8F3EA"))
+    subtitle_color = colors.HexColor("#EDE5FB") if is_monthly else colors.HexColor("#D8F3EA")
+    canvas.setFillColor(subtitle_color)
     canvas.drawString(20 * mm, page_h - 22 * mm, period_text)
 
     # Footer
@@ -207,7 +224,7 @@ def generate_pdf_report(
     n_days,
     top5_series,          # pandas Series: index=defect name, values=qty (already top 5, descending)
     leader_df,             # DataFrame with columns: หัวหน้ากะ, ยอดไม้เข้าขัด (m³), ตำหนิหลังขัด (m³), % ตำหนิ
-    tech_summary_df,       # DataFrame with columns: ช่างเครื่องขัด, จำนวนแผ่น (Pcs)  (may be empty)
+    tech_summary_df,       # DataFrame with columns: Operator เครื่องขัด, จำนวนแผ่น (Pcs)  (may be empty)
     tech_defecttype_df,    # DataFrame with columns: ประเภทตำหนิ, จำนวนแผ่น (Pcs)   (may be empty)
     generated_at_text,
     defect_target_pct=3.0,
@@ -216,7 +233,8 @@ def generate_pdf_report(
     is_monthly=False,        # True เมื่อ period_text เป็น "ประจำเดือน ..." (28-31 วัน เดือนเดียวกัน) -> กราฟเป็นสีม่วง
 ):
     _ensure_fonts()
-    styles = _styles()
+    styles = _styles(is_monthly=is_monthly)
+    accent, accent_dark, accent_light = _theme_colors(is_monthly)
     chart_color = "#7B4FE0" if is_monthly else "#009B77"
 
     report_title = "รายงานสรุปตำหนิหลังขัด" + (f" {production_line}" if production_line else "")
@@ -319,10 +337,10 @@ def generate_pdf_report(
     kpi_table = Table(kpi_data, colWidths=[42 * mm] * 4)
     kpi_table.setStyle(TableStyle([
         ("SPAN", (0, 0), (0, 1)),
-        ("BACKGROUND", (1, 0), (-1, -1), VIRIDIAN_LIGHT),
-        ("BOX", (1, 0), (1, -1), 1, VIRIDIAN),
-        ("BOX", (2, 0), (2, -1), 1, VIRIDIAN),
-        ("BOX", (3, 0), (3, -1), 1, VIRIDIAN),
+        ("BACKGROUND", (1, 0), (-1, -1), accent_light),
+        ("BOX", (1, 0), (1, -1), 1, accent),
+        ("BOX", (2, 0), (2, -1), 1, accent),
+        ("BOX", (3, 0), (3, -1), 1, accent),
         ("TOPPADDING", (1, 0), (-1, 0), 14),
         ("BOTTOMPADDING", (1, 0), (-1, 0), 2),
         ("TOPPADDING", (1, 1), (-1, 1), 2),
@@ -338,7 +356,7 @@ def generate_pdf_report(
 
     # ---------- Top 5 defects ----------
     story.append(Paragraph("Top 5 ตำหนิ (จำนวนแผ่นรวม)", styles["section"]))
-    story.append(HRFlowable(width="100%", thickness=1, color=VIRIDIAN, spaceAfter=8))
+    story.append(HRFlowable(width="100%", thickness=1, color=accent, spaceAfter=8))
 
     if top5_series is not None and len(top5_series) > 0:
         labels = list(top5_series.index)
@@ -350,7 +368,7 @@ def generate_pdf_report(
         top5_df = top5_series.reset_index()
         top5_df.columns = ["ประเภทตำหนิ", "จำนวนแผ่น (Pcs)"]
         top5_df["จำนวนแผ่น (Pcs)"] = top5_df["จำนวนแผ่น (Pcs)"].map(lambda x: f"{x:,.0f}")
-        story.append(_df_to_table(top5_df, col_widths=[120 * mm, 50 * mm]))
+        story.append(_df_to_table(top5_df, col_widths=[120 * mm, 50 * mm], header_bg=accent, row_stripe=accent_light))
     else:
         story.append(Paragraph("ไม่มีข้อมูลตำหนิรายชนิดในช่วงวันที่นี้", styles["body"]))
 
@@ -358,7 +376,7 @@ def generate_pdf_report(
 
     # ---------- Leader breakdown ----------
     story.append(Paragraph("% ตำหนิหลังขัด แยกตามหัวหน้ากะ", styles["section"]))
-    story.append(HRFlowable(width="100%", thickness=1, color=VIRIDIAN, spaceAfter=8))
+    story.append(HRFlowable(width="100%", thickness=1, color=accent, spaceAfter=8))
 
     if leader_df is not None and len(leader_df) > 0:
         ld = leader_df.reset_index() if leader_df.index.name == "หัวหน้ากะ" else leader_df.copy()
@@ -380,6 +398,7 @@ def generate_pdf_report(
             ld["% ตำหนิ"] = ld["% ตำหนิ"].map(lambda x: f"{x:.2f}%")
         story.append(_df_to_table(
             ld, col_widths=[45 * mm, 45 * mm, 45 * mm, 35 * mm],
+            header_bg=accent, row_stripe=accent_light,
             red_row_indices=red_row_indices,
         ))
     else:
@@ -388,14 +407,14 @@ def generate_pdf_report(
     story.append(Spacer(1, 16))
 
     # ---------- Machine operator (technician) breakdown ----------
-    story.append(Paragraph("ตำหนิเครื่องขัด", styles["section"]))
-    story.append(HRFlowable(width="100%", thickness=1, color=VIRIDIAN, spaceAfter=8))
+    story.append(Paragraph("ตำหนิจากเครื่องขัด", styles["section"]))
+    story.append(HRFlowable(width="100%", thickness=1, color=accent, spaceAfter=8))
 
     if tech_summary_df is not None and len(tech_summary_df) > 0:
         left_tbl_df = tech_summary_df.copy()
-        left_tbl_df.columns = ["ช่างเครื่องขัด", "จำนวนแผ่น (Pcs)"]
+        left_tbl_df.columns = ["Operator เครื่องขัด", "จำนวนแผ่น (Pcs)"]
         left_tbl_df["จำนวนแผ่น (Pcs)"] = left_tbl_df["จำนวนแผ่น (Pcs)"].map(lambda x: f"{x:,.0f}")
-        story.append(_df_to_table(left_tbl_df, col_widths=[85 * mm, 85 * mm]))
+        story.append(_df_to_table(left_tbl_df, col_widths=[85 * mm, 85 * mm], header_bg=accent, row_stripe=accent_light))
         story.append(Spacer(1, 8))
 
         if tech_defecttype_df is not None and len(tech_defecttype_df) > 0:
@@ -404,13 +423,13 @@ def generate_pdf_report(
             chart_buf2 = _make_bar_chart_png(labels, values, color=chart_color, horizontal=False, figsize=(6.6, 3.0))
             story.append(Image(chart_buf2, width=165 * mm, height=72 * mm))
     else:
-        story.append(Paragraph("ไม่มีข้อมูลระบุชื่อช่างเครื่องขัดในช่วงวันที่นี้", styles["body"]))
+        story.append(Paragraph("ไม่มีข้อมูลระบุชื่อ Operator เครื่องขัดในช่วงวันที่นี้", styles["body"]))
 
     story.append(Spacer(1, 16))
 
     # ---------- สรุปตำหนิแยกตามแหล่งที่มา (Press / เครื่องขัด / แตกรถยก / อื่นๆ) ----------
     story.append(Paragraph("สรุปตำหนิแยกตามแหล่งที่มา", styles["section"]))
-    story.append(HRFlowable(width="100%", thickness=1, color=VIRIDIAN, spaceAfter=8))
+    story.append(HRFlowable(width="100%", thickness=1, color=accent, spaceAfter=8))
 
     if source_summary_df is not None and len(source_summary_df) > 0:
         sd = source_summary_df.copy()
@@ -425,6 +444,7 @@ def generate_pdf_report(
         sd["% ตำหนิรวม"] = sd["% ตำหนิรวม"].map(lambda x: f"{x:.2f}%")
         story.append(_df_to_table(
             sd, col_widths=[65 * mm, 55 * mm, 55 * mm],
+            header_bg=accent, row_stripe=accent_light,
             red_row_indices=source_red_rows,
         ))
     else:
@@ -435,7 +455,7 @@ def generate_pdf_report(
     story.append(Paragraph(f"สร้างรายงานเมื่อ: {generated_at_text}", styles["footer"]))
 
     def _on_page(canvas, doc_):
-        _header_footer(canvas, doc_, report_title, period_text)
+        _header_footer(canvas, doc_, report_title, period_text, is_monthly=is_monthly)
 
     doc.build(story, onFirstPage=_on_page, onLaterPages=_on_page)
     return out_path
