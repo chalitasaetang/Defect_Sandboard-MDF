@@ -124,7 +124,7 @@ def _make_line_chart_png(trend_df, colors_list=None, figsize=(6.6, 2.6)):
     """
     _ensure_fonts()
     fig, ax = plt.subplots(figsize=figsize, dpi=200)
-    default_palette = ["#09093C", "#527482", "#96D4ED", "#00694A", "#E0304F"]
+    default_palette = ["#09093C", "#E0304F", "#00B4D8", "#F2A900", "#4CAF50"]
     palette = colors_list if colors_list else default_palette
 
     x_labels = [d.strftime("%d/%m") for d in trend_df.index]
