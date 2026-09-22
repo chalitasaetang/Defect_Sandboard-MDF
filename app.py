@@ -125,12 +125,13 @@ def _section_header(text):
 
 def _table_header_style(styler):
     """
-    บังคับสีพื้นหลัง/ตัวหนังสือหัวตารางให้เป็นม่วงเมื่อเป็นรายงานประจำเดือน
+    บังคับสีพื้นหลัง/ตัวหนังสือหัวตารางให้เป็นฟ้าเมื่อเป็นรายงานประจำเดือน
     เขียวตามปกติเมื่อไม่ใช่ (ใช้ set_table_styles คุม <th> โดยตรง ไม่ผูกกับ config.toml ของ Streamlit)
     """
     header_bg = "#96D4ED" if is_monthly_period else "#009B77"
+    header_text = "#0F2A38" if is_monthly_period else "white"
     return styler.set_table_styles(
-        [{"selector": "th", "props": [("background-color", header_bg), ("color", "white")]}],
+        [{"selector": "th", "props": [("background-color", header_bg), ("color", header_text)]}],
         overwrite=False,
     )
 
