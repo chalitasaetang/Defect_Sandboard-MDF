@@ -198,11 +198,12 @@ def _header_footer(canvas, doc, title_text, period_text, is_monthly=False):
     canvas.rect(0, page_h - 32 * mm, page_w, 3, fill=1, stroke=0)
 
     canvas.setFont("Sarabun-Bold", 18)
-    canvas.setFillColor(colors.white)
+    title_color = accent_dark if is_monthly else colors.white
+    canvas.setFillColor(title_color)
     canvas.drawString(20 * mm, page_h - 15 * mm, title_text)
 
     canvas.setFont("Sarabun", 12)
-    subtitle_color = colors.HexColor("#F0F9FD") if is_monthly else colors.HexColor("#D8F3EA")
+    subtitle_color = accent_dark if is_monthly else colors.HexColor("#D8F3EA")
     canvas.setFillColor(subtitle_color)
     canvas.drawString(20 * mm, page_h - 22 * mm, period_text)
 
